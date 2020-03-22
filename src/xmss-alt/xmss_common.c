@@ -18,7 +18,7 @@ Public domain.
 void to_byte(unsigned char *out, unsigned long long in, uint32_t bytes) {
     int32_t i;
     for (i = bytes - 1; i >= 0; i--) {
-        out[i] = static_cast<unsigned char>(in & 0xff);
+        out[i] = (unsigned char)(in & 0xff);
         in = in >> 8;
     }
 }
@@ -87,8 +87,10 @@ validate_authpath(eHashFunction hash_func,
                   const uint32_t h,
                   const unsigned char *pub_seed,
                   uint32_t addr[8]) {
+    assert (XMSS_PARAM_MAX_n >= n);
+
     uint32_t i, j;
-    unsigned char buffer[2 * n];
+    unsigned char buffer[2 * XMSS_PARAM_MAX_n];
 
     // If leafidx is odd (last bit = 1), current path element is a right child and authpath has to go to the left.
     // Otherwise, it is the other way around
@@ -137,20 +139,22 @@ int xmss_Verifysig(eHashFunction hash_func,
                    unsigned char *sig_msg,
                    const unsigned char *pk,
                    unsigned char h) {
+    assert (XMSS_PARAM_MAX_n >= n);
+    assert (XMSS_PARAM_MAX_keysize >= wotsParams->keysize);
 
-    auto sig_msg_len = static_cast<unsigned long long int>(4 + 32 + wotsParams->len * 32 + h * 32);
+    int sig_msg_len = (unsigned long long int)(4 + 32 + wotsParams->len * 32 + h * 32);
 
     uint32_t n = wotsParams->n;
 
     unsigned long long i, m_len;
     unsigned long idx = 0;
-    unsigned char wots_pk[wotsParams->keysize];
-    unsigned char pkhash[n];
-    unsigned char root[n];
-    unsigned char msg_h[n];
-    unsigned char hash_key[3 * n];
+    unsigned char wots_pk[XMSS_PARAM_MAX_keysize];
+    unsigned char pkhash[XMSS_PARAM_MAX_n];
+    unsigned char root[XMSS_PARAM_MAX_n];
+    unsigned char msg_h[XMSS_PARAM_MAX_n];
+    unsigned char hash_key[3 * XMSS_PARAM_MAX_n];
 
-    unsigned char pub_seed[n];
+    unsigned char pub_seed[XMSS_PARAM_MAX_n];
     memcpy(pub_seed, pk + n, n);
 
     // Init addresses

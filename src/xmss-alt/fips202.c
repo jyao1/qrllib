@@ -26,7 +26,7 @@ static void store64(uint8_t *x, uint64_t u) {
     unsigned int i;
 
     for (i = 0; i < 8; ++i) {
-        x[i] = static_cast<uint8_t>(u);
+        x[i] = (uint8_t)(u);
         u >>= 8;
     }
 }

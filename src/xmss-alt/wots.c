@@ -19,9 +19,24 @@ Public domain.
 void wots_set_params(wots_params *params, int n, int w) {
     params->n = n;
     params->w = w;
-    params->log_w = (int) log2(w);
-    params->len_1 = (int) ceil(((8 * n) / params->log_w));
-    params->len_2 = (int) floor(log2(params->len_1 * (w - 1)) / params->log_w) + 1;
+    if (w == 4) {
+        params->log_w = (int) 2;
+        params->len_1 = (int) ((8 * n) / params->log_w);
+        // params->len_2 = floor(log2(params->len_1 * (w - 1)) / params->log_w) + 1
+        params->len_2 = (int) 5;
+    } else if (w == 16) {
+        params->log_w = (int) 4;
+        params->len_1 = (int) ((8 * n) / params->log_w);
+        // params->len_2 = floor(log2(params->len_1 * (w - 1)) / params->log_w) + 1
+        params->len_2 = (int) 3;
+    } else if (w == 256) {
+        params->log_w = (int) 8;
+        params->len_1 = (int) ((8 * n) / params->log_w);
+        // params->len_2 = floor(log2(params->len_1 * (w - 1)) / params->log_w) + 1
+        params->len_2 = (int) 2;
+    } else {
+        assert (0);
+    }
     params->len = params->len_1 + params->len_2;
     params->keysize = params->len * params->n;
 }
@@ -124,7 +139,10 @@ void wots_sign(eHashFunction hash_func,
                const wots_params *params,
                const unsigned char *pub_seed,
                uint32_t addr[8]) {
-    int basew[params->len];
+    assert (XMSS_PARAM_MAX_len >= params->len);
+    assert (XMSS_PARAM_MAX_len2 >= params->len_2);
+    assert (XMSS_PARAM_MAX_log_w >= params->log_w);
+    int basew[XMSS_PARAM_MAX_len];
     int csum = 0;
     uint32_t i = 0;
 
@@ -138,10 +156,10 @@ void wots_sign(eHashFunction hash_func,
 
     uint32_t len_2_bytes = ((params->len_2 * params->log_w) + 7) / 8;
 
-    unsigned char csum_bytes[len_2_bytes];
+    unsigned char csum_bytes[(XMSS_PARAM_MAX_len2 * XMSS_PARAM_MAX_log_w + 7) / 8];
     to_byte(csum_bytes, csum, len_2_bytes);
 
-    int csum_basew[params->len_2];
+    int csum_basew[XMSS_PARAM_MAX_len2];
 
     base_w(csum_basew, params->len_2, csum_bytes, params);
 
@@ -164,6 +182,10 @@ void wots_pkFromSig(eHashFunction hash_func,
                     const wots_params *wotsParams,
                     const unsigned char *pub_seed,
                     uint32_t addr[8]) {
+    assert (XMSS_PARAM_MAX_len >= params->len);
+    assert (XMSS_PARAM_MAX_len2 >= params->len_2);
+    assert (XMSS_PARAM_MAX_log_w >= params->log_w);
+
     uint32_t XMSS_WOTS_LEN = wotsParams->len;
     uint32_t XMSS_WOTS_LEN1 = wotsParams->len_1;
     uint32_t XMSS_WOTS_LEN2 = wotsParams->len_2;
@@ -171,10 +193,10 @@ void wots_pkFromSig(eHashFunction hash_func,
     uint32_t XMSS_WOTS_W = wotsParams->w;
     uint32_t XMSS_N = wotsParams->n;
 
-    int basew[XMSS_WOTS_LEN];
+    int basew[XMSS_PARAM_MAX_len];
     int csum = 0;
-    unsigned char csum_bytes[((XMSS_WOTS_LEN2 * XMSS_WOTS_LOG_W) + 7) / 8];
-    int csum_basew[XMSS_WOTS_LEN2];
+    unsigned char csum_bytes[(XMSS_PARAM_MAX_len2 * XMSS_PARAM_MAX_log_w + 7) / 8];
+    int csum_basew[XMSS_PARAM_MAX_len2];
     uint32_t i = 0;
 
     base_w(basew, XMSS_WOTS_LEN1, msg, wotsParams);

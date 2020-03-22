@@ -8,7 +8,11 @@ This code was taken from the XMSS reference implementation by Andreas Hülsing a
 #include "xmss_common.h"
 #include "hash.h"
 #include "fips202.h"
+#ifdef __UEFI__
+#include <openssl/sha.h>
+#else
 #include "shasha.h"
+#endif
 #include <cstdio>
 
 unsigned char *addr_to_byte(unsigned char *bytes, const uint32_t addr[8]) {
@@ -32,7 +36,10 @@ int core_hash(eHashFunction hash_func,
               unsigned long long inlen,
               unsigned int n) {
     unsigned long long i = 0;
-    unsigned char buf[inlen + n + keylen];
+    unsigned char *buf = malloc(inlen + n + keylen);
+    if (buf == NULL) {
+        return 1;
+    }
 
     // Input is (toByte(X, 32) || KEY || M)
 
@@ -47,40 +54,50 @@ int core_hash(eHashFunction hash_func,
         buf[keylen + n + i] = in[i];
     }
 
-    if (hash_func==eHashFunction::SHAKE_128)
+    if (hash_func==SHAKE_128)
     {
         if (n == 32) {
             shake128(out, 32, buf, inlen + keylen + n);
+            free (buf);
             return 0;
         }
 
         if (n == 64) {
             shake128(out, 64, buf, inlen + keylen + n);
+            free (buf);
             return 0;
         }
     }
 
-    if (hash_func==eHashFunction::SHAKE_256)
+    if (hash_func==SHAKE_256)
     {
         if (n == 32) {
             shake256(out, 32, buf, inlen + keylen + n);
+            free (buf);
             return 0;
         }
 
         if (n == 64) {
             shake256(out, 64, buf, inlen + keylen + n);
+            free (buf);
             return 0;
         }
     }
 
-    if (hash_func==eHashFunction::SHA2_256)
+    if (hash_func==SHA2_256)
     {
         if (n == 32) {
+#ifdef __UEFI__
+            SHA256(buf, inlen + keylen + n, out);
+#else
             sha2_256(out, buf, inlen + keylen + n);
+#endif
+            free (buf);
             return 0;
         }
     }
 
+    free (buf);
     return 1;
 }
 
@@ -113,10 +130,11 @@ int h_msg(eHashFunction hash_func,
 int hash_h(eHashFunction hash_func,
            unsigned char *out, const unsigned char *in, const unsigned char *pub_seed, uint32_t addr[8],
            const unsigned int n) {
+    assert (XMSS_PARAM_MAX_n >= n);
 
-    unsigned char buf[2 * n];
-    unsigned char key[n];
-    unsigned char bitmask[2 * n];
+    unsigned char buf[2 * XMSS_PARAM_MAX_n];
+    unsigned char key[XMSS_PARAM_MAX_n];
+    unsigned char bitmask[2 * XMSS_PARAM_MAX_n];
     unsigned char byte_addr[32];
     unsigned int i;
 
@@ -139,9 +157,11 @@ int hash_h(eHashFunction hash_func,
 int hash_f(eHashFunction hash_func,
            unsigned char *out, const unsigned char *in, const unsigned char *pub_seed, uint32_t addr[8],
            const unsigned int n) {
-    unsigned char buf[n];
-    unsigned char key[n];
-    unsigned char bitmask[n];
+    assert (XMSS_PARAM_MAX_n >= n);
+
+    unsigned char buf[XMSS_PARAM_MAX_n];
+    unsigned char key[XMSS_PARAM_MAX_n];
+    unsigned char bitmask[XMSS_PARAM_MAX_n];
     unsigned char byte_addr[32];
     unsigned int i;
 

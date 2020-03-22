@@ -41,8 +41,11 @@ void gen_leaf_wots(eHashFunction hash_func,
                           const unsigned char *pub_seed,
                           uint32_t ltree_addr[8],
                           uint32_t ots_addr[8]) {
-    unsigned char seed[params->n];
-    unsigned char pk[params->wots_par.keysize];
+    assert (XMSS_PARAM_MAX_n >= params->n);
+    assert (XMSS_PARAM_MAX_keysize >= params->wots_par.keysize);
+
+    unsigned char seed[XMSS_PARAM_MAX_n];
+    unsigned char pk[XMSS_PARAM_MAX_keysize];
 
     get_seed(hash_func, seed, sk_seed, params->n, ots_addr);
     wots_pkgen(hash_func, pk, seed, &(params->wots_par), pub_seed, ots_addr);
@@ -65,6 +68,8 @@ treehash(eHashFunction hash_func,
          const xmss_params *params,
          const unsigned char *pub_seed,
          const uint32_t addr[8]) {
+    assert (XMSS_PARAM_MAX_h >= height);
+    assert (XMSS_PARAM_MAX_n >= n);
 
     uint32_t idx = index;
     uint16_t n = params->n;
@@ -82,8 +87,8 @@ treehash(eHashFunction hash_func,
     setType(node_addr, 2);
 
     uint32_t lastnode, i;
-    unsigned char stack[(height + 1) * n];
-    uint16_t stacklevels[height + 1];
+    unsigned char stack[(XMSS_PARAM_MAX_h + 1) * XMSS_PARAM_MAX_n];
+    uint16_t stacklevels[XMSS_PARAM_MAX_h + 1];
     unsigned int stackoffset = 0;
 
     lastnode = idx + (1 << height);
@@ -120,11 +125,14 @@ static void compute_authpath_wots(eHashFunction hash_func,
                                   const xmss_params *params,
                                   unsigned char *pub_seed,
                                   uint32_t addr[8]) {
+    assert (XMSS_PARAM_MAX_n >= n);
+    assert (XMSS_PARAM_MAX_h >= h);
+
     uint32_t i, j, level;
     uint32_t n = params->n;
     uint32_t h = params->h;
 
-    unsigned char tree[2 * (1 << h) * n];
+    unsigned char tree[2 * (1 << XMSS_PARAM_MAX_h) * XMSS_PARAM_MAX_n];
 
     uint32_t ots_addr[8];
     uint32_t ltree_addr[8];
@@ -172,6 +180,8 @@ int xmss_Genkeypair(eHashFunction hash_func,
                     unsigned char *pk,
                     unsigned char *sk,
                     unsigned char *seed) {
+    assert (XMSS_PARAM_MAX_n >= n);
+
     unsigned int n = params->n;
     // Set idx = 0
     sk[0] = 0;
@@ -180,7 +190,7 @@ int xmss_Genkeypair(eHashFunction hash_func,
     sk[3] = 0;
 
     //Construct SK_SEED (n byte), SK_PRF (n byte), and PUB_SEED (n byte) from n-byte seed
-    unsigned char randombits[3 * n];
+    unsigned char randombits[3 * XMSS_PARAM_MAX_n];
     shake256(randombits, 3 * n, seed, 48);
 
     // Copy PUB_SEED to public key
@@ -221,17 +231,19 @@ int xmss_Signmsg(eHashFunction hash_func,
                  unsigned char *sig_msg,
                  unsigned char *msg,
                  size_t msglen) {
+    assert (XMSS_PARAM_MAX_n >= n);
+
     unsigned long long sig_msg_len;
     uint16_t n = params->n;
     uint16_t i = 0;
 
     // Extract SK
     uint32_t idx = ((unsigned long) sk[0] << 24) | ((unsigned long) sk[1] << 16) | ((unsigned long) sk[2] << 8) | sk[3];
-    unsigned char sk_seed[n];
+    unsigned char sk_seed[XMSS_PARAM_MAX_n];
     memcpy(sk_seed, sk + 4, n);
-    unsigned char sk_prf[n];
+    unsigned char sk_prf[XMSS_PARAM_MAX_n];
     memcpy(sk_prf, sk + 4 + n, n);
-    unsigned char pub_seed[n];
+    unsigned char pub_seed[XMSS_PARAM_MAX_n];
     memcpy(pub_seed, sk + 4 + 2 * n, n);
 
     // index as 32 bytes string
@@ -239,7 +251,7 @@ int xmss_Signmsg(eHashFunction hash_func,
     to_byte(idx_bytes_32, idx, 32);
 
 
-    unsigned char hash_key[3 * n];
+    unsigned char hash_key[3 * XMSS_PARAM_MAX_n];
 
     // Update SK
     sk[0] = ((idx + 1) >> 24) & 255;
@@ -250,10 +262,10 @@ int xmss_Signmsg(eHashFunction hash_func,
     // -- A productive implementation should use a file handle instead and write the updated secret key at this point!
 
     // Init working params
-    unsigned char R[n];
-    unsigned char msg_h[n];
-    unsigned char root[n];
-    unsigned char ots_seed[n];
+    unsigned char R[XMSS_PARAM_MAX_n];
+    unsigned char msg_h[XMSS_PARAM_MAX_n];
+    unsigned char root[XMSS_PARAM_MAX_n];
+    unsigned char ots_seed[XMSS_PARAM_MAX_n];
     uint32_t ots_addr[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
     // ---------------------------------

@@ -1,6 +1,22 @@
 #ifndef WOTS_PARAMS_H
 #define WOTS_PARAMS_H
 
+#define XMSS_PARAM_MAX_n           32
+#define XMSS_PARAM_MAX_w           16
+#define XMSS_PARAM_MAX_log_w       4
+#define XMSS_PARAM_MAX_len1        64
+#define XMSS_PARAM_MAX_len2        4
+#define XMSS_PARAM_MAX_len         (XMSS_PARAM_MAX_len1 + XMSS_PARAM_MAX_len2)
+#define XMSS_PARAM_MAX_keysize     (XMSS_PARAM_MAX_len * XMSS_PARAM_MAX_n)
+/*
+    params->n = n;
+    params->w = w;
+    params->log_w = (int) log2(w);
+    params->len_1 = (int) ceil(((8 * n) / params->log_w));
+    params->len_2 = (int) floor(log2(params->len_1 * (w - 1)) / params->log_w) + 1;
+    params->len = params->len_1 + params->len_2;
+    params->keysize = params->len * params->n;
+*/
 /**
  * WOTS parameter set
  *

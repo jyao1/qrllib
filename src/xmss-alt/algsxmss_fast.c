@@ -76,8 +76,11 @@ static void gen_leaf_wots(eHashFunction hash_func,
                           uint32_t ltree_addr[8],
                           uint32_t ots_addr[8])
 {
-    unsigned char seed[params->n];
-    unsigned char pk[params->wots_par.keysize];
+    assert (XMSS_PARAM_MAX_n >= params->n);
+    assert (XMSS_PARAM_MAX_keysize >= params->wots_par.keysize);
+
+    unsigned char seed[XMSS_PARAM_MAX_n];
+    unsigned char pk[XMSS_PARAM_MAX_keysize];
 
     get_seed(hash_func, seed, sk_seed, params->n, ots_addr);
     wots_pkgen(hash_func, pk, seed, &(params->wots_par), pub_seed, ots_addr);
@@ -111,6 +114,9 @@ static void treehash_setup(eHashFunction hash_func,
                            const unsigned char *pub_seed,
                            const uint32_t addr[8])
 {
+    assert (XMSS_PARAM_MAX_h >= height);
+    assert (XMSS_PARAM_MAX_n >= n);
+
     unsigned int idx = index;
     unsigned int n = params->n;
     unsigned int h = params->h;
@@ -129,8 +135,8 @@ static void treehash_setup(eHashFunction hash_func,
     setType(node_addr, 2);
 
     uint32_t lastnode, i;
-    unsigned char stack[(height + 1) * n];
-    unsigned int stacklevels[height + 1];
+    unsigned char stack[(XMSS_PARAM_MAX_h + 1) * XMSS_PARAM_MAX_n];
+    unsigned int stacklevels[XMSS_PARAM_MAX_h + 1];
     unsigned int stackoffset = 0;
     unsigned int nodeh;
 
@@ -186,6 +192,8 @@ treehash_update(eHashFunction hash_func,
                 treehash_inst *treehash, bds_state *state, const unsigned char *sk_seed, const xmss_params *params,
                 const unsigned char *pub_seed, const uint32_t addr[8])
 {
+    assert (XMSS_PARAM_MAX_n >= n);
+
     int n = params->n;
 
     uint32_t ots_addr[8];
@@ -203,7 +211,7 @@ treehash_update(eHashFunction hash_func,
     setLtreeADRS(ltree_addr, treehash->next_idx);
     setOTSADRS(ots_addr, treehash->next_idx);
 
-    unsigned char nodebuffer[2 * n];
+    unsigned char nodebuffer[2 * XMSS_PARAM_MAX_n];
     unsigned int nodeheight = 0;
     gen_leaf_wots(hash_func, nodebuffer, sk_seed, params, pub_seed, ltree_addr, ots_addr);
     while (treehash->stackusage > 0 && state->stacklevels[state->stackoffset - 1] == nodeheight) {
@@ -237,10 +245,12 @@ validate_authpath(eHashFunction hash_func,
                   unsigned char *root, const unsigned char *leaf, unsigned long leafidx, const unsigned char *authpath,
                   const xmss_params *params, const unsigned char *pub_seed, uint32_t addr[8])
 {
+    assert (XMSS_PARAM_MAX_n >= n);
+
     unsigned int n = params->n;
 
     uint32_t i, j;
-    unsigned char buffer[2 * n];
+    unsigned char buffer[2 * XMSS_PARAM_MAX_n];
 
     // If leafidx is odd (last bit = 1), current path element is a right child and authpath has to go to the left.
     // Otherwise, it is the other way around
@@ -419,6 +429,8 @@ bds_round(eHashFunction hash_func,
           unsigned char *pub_seed,
           uint32_t addr[8])
 {
+    assert (XMSS_PARAM_MAX_n >= n);
+
     unsigned int i;
     unsigned int n = params->n;
     unsigned int h = params->h;
@@ -427,7 +439,7 @@ bds_round(eHashFunction hash_func,
     unsigned int tau = h;
     unsigned int startidx;
     unsigned int offset, rowidx;
-    unsigned char buf[2 * n];
+    unsigned char buf[2 * XMSS_PARAM_MAX_n];
 
     uint32_t ots_addr[8];
     uint32_t ltree_addr[8];
@@ -500,6 +512,8 @@ int xmssfast_Genkeypair(eHashFunction hash_func,
                         bds_state *state,
                         unsigned char *seed)
 {
+    assert (XMSS_PARAM_MAX_n >= n);
+
     if (params->h & 1) {
         printf("Not a valid h, only even numbers supported! Try again with an even number");
         return -1;
@@ -514,7 +528,7 @@ int xmssfast_Genkeypair(eHashFunction hash_func,
     sk[3] = 0;
 
     // Copy PUB_SEED to public key
-    unsigned char randombits[3 * n];
+    unsigned char randombits[3 * XMSS_PARAM_MAX_n];
     shake256(randombits, 3 * n, seed, 48);  // FIXME: seed size has been hardcoded to 48
     size_t rnd = 96;
     size_t pks = 32;
@@ -538,7 +552,7 @@ int xmssfast_update(eHashFunction hash_func,
 {
     const uint32_t num_elems = (1U << params->h);
 
-    auto current_idx = static_cast<uint32_t>(
+    uint32_t current_idx = (uint32_t)(
         ((unsigned long) sk[0] << 24) |
         ((unsigned long) sk[1] << 16) |
         ((unsigned long) sk[2] << 8) |
@@ -547,12 +561,14 @@ int xmssfast_update(eHashFunction hash_func,
     // Verify ranges
     if (new_idx>=num_elems)
     {
-        throw std::invalid_argument("index too high");
+        //throw std::invalid_argument("index too high");
+        return -1;
     }
 
     if (new_idx<current_idx)
     {
-        throw std::invalid_argument("cannot rewind");
+        //throw std::invalid_argument("cannot rewind");
+        return -1;
     }
 
     // Change index
@@ -581,10 +597,10 @@ int xmssfast_update(eHashFunction hash_func,
     }
 
     //update secret key index
-    sk[0] = static_cast<unsigned char>(((new_idx) >> 24) & 255);
-    sk[1] = static_cast<unsigned char>(((new_idx) >> 16) & 255);
-    sk[2] = static_cast<unsigned char>(((new_idx) >> 8) & 255);
-    sk[3] = static_cast<unsigned char>((new_idx) & 255);
+    sk[0] = (unsigned char)(((new_idx) >> 24) & 255);
+    sk[1] = (unsigned char)(((new_idx) >> 16) & 255);
+    sk[2] = (unsigned char)(((new_idx) >> 8) & 255);
+    sk[3] = (unsigned char)((new_idx) & 255);
 
     return 0;
 }
@@ -597,24 +613,26 @@ int xmssfast_Signmsg(eHashFunction hash_func,
                      unsigned char *msg,
                      unsigned long long msglen)
 {
+    assert (XMSS_PARAM_MAX_n >= n);
+
     unsigned int n = params->n;
     uint16_t i = 0;
 
     // Extract SK
     unsigned long idx =
         ((unsigned long) sk[0] << 24) | ((unsigned long) sk[1] << 16) | ((unsigned long) sk[2] << 8) | sk[3];
-    unsigned char sk_seed[n];
+    unsigned char sk_seed[XMSS_PARAM_MAX_n];
     memcpy(sk_seed, sk + 4, n);
-    unsigned char sk_prf[n];
+    unsigned char sk_prf[XMSS_PARAM_MAX_n];
     memcpy(sk_prf, sk + 4 + n, n);
-    unsigned char pub_seed[n];
+    unsigned char pub_seed[XMSS_PARAM_MAX_n];
     memcpy(pub_seed, sk + 4 + 2 * n, n);
 
     // index as 32 bytes string
     unsigned char idx_bytes_32[32];
     to_byte(idx_bytes_32, idx, 32);
 
-    unsigned char hash_key[3 * n];
+    unsigned char hash_key[3 * XMSS_PARAM_MAX_n];
 
     // Update SK
     sk[0] = ((idx + 1) >> 24) & 255;
@@ -625,9 +643,9 @@ int xmssfast_Signmsg(eHashFunction hash_func,
     // -- A productive implementation should use a file handle instead and write the updated secret key at this point!
     unsigned long long sig_msg_len;
     // Init working params
-    unsigned char R[n];
-    unsigned char msg_h[n];
-    unsigned char ots_seed[n];
+    unsigned char R[XMSS_PARAM_MAX_n];
+    unsigned char msg_h[XMSS_PARAM_MAX_n];
+    unsigned char ots_seed[XMSS_PARAM_MAX_n];
     uint32_t ots_addr[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
     // ---------------------------------

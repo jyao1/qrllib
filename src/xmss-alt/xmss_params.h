@@ -11,6 +11,13 @@
 
 // TODO: remove this if possible. use a context struct?
 
+#define XMSS_PARAM_MAX_h 4
+#define XMSS_PARAM_MAX_k 2
+/*
+SIGNATURE_BASE_SIZE = calculateSignatureBaseSize(wotsParamW) = 4 + 32 + wotsParams.keysize;
+height = (sigSize - SIGNATURE_BASE_SIZE)/32;
+*/
+
 typedef struct {
     wots_params wots_par;
     uint32_t n;
